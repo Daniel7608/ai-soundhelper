@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Soundhelper — Система генерации аудиосигналов</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2 family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="studio-header">
+    <div class="container-fluid px-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-md-center gap-3">
+            <div>
+                <h1 class="studio-logo mb-0"><i class="fas fa-waveform me-2"></i>AI Soundhelper</h1>
+                <p class="studio-subhead mb-0">Модуль интеллектуального синтеза звука и управления профилями</p>
+            </div>
+            
+            <ul class="nav nav-tabs-custom list-unstyled p-0 mb-0 d-flex gap-2">
+                <li><button class="tab-link active" data-tab="main"><i class="fas fa-sliders-h me-2"></i>Генератор</button></li>
+                <li><button class="tab-link" data-tab="profiles"><i class="fas fa-user-astronaut me-2"></i>Профили</button></li>
+                <li><button class="tab-link" data-tab="tracks"><i class="fas fa-music me-2"></i>Библиотека</button></li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+<main class="studio-workspace container-fluid px-4">
+    <div class="workspace-wrapper h-100">
+        
+        <div id="main" class="tab-pane active h-100">
+            <div class="row g-4 h-100">
+                
+                <div class="col-lg-5 d-flex flex-column h-100">
+                    <div class="glass-card p-4 flex-grow-1 d-flex flex-column overflow-hidden">
+                        <div class="d-flex align-items-center gap-2 mb-4 border-bottom border-white border-opacity-10 pb-2 flex-shrink-0">
+                            <i class="fas fa-head-side-vr fa-lg text-warning"></i>
+                            <h3 class="h5 mb-0 fw-semibold text-white">Анализ референсов</h3>
+                        </div>
+                        
+                        <div class="mb-3 flex-shrink-0">
+                            <input type="file" id="fileInput" multiple accept="audio/*">
+                            <label for="fileInput" class="w-100 m-0">
+                                <div class="file-upload-design py-4" id="dropZone">
+                                    <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-info"></i>
+                                    <span class="d-block fw-semibold text-white">Выберите аудиофайлы</span>
+                                    <span class="small opacity-50 fst-italic text-secondary">Допускается загрузка до 5 файлов</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div id="fileListContainer" class="mb-3 overflow-auto flex-grow-1 style-scrollbar px-1"></div>
+
+                        <div class="d-flex gap-2 mb-2 flex-shrink-0">
+                            <button onclick="uploadFiles()" class="btn-custom flex-grow-1"><i class="fas fa-chart-line me-2"></i>Выполнить анализ</button>
+                            <button onclick="resetUpload()" class="btn btn-outline-secondary rounded-3 px-3 border-opacity-25" title="Очистить файлы"><i class="fas fa-undo"></i></button>
+                        </div>
+                        
+                        <div id="statusAnalyze" class="status mt-2 small flex-shrink-0"></div>
+                        
+                        <div id="saveProfileBox" class="save-profile-area mt-3 flex-shrink-0" style="display:none;">
+                            <div class="p-3 rounded-4 bg-dark bg-opacity-40 border border-warning border-opacity-20 shadow-lg">
+                                <label class="mb-2 small fw-bold text-warning opacity-75 text-uppercase tracking-wider">Сохранить параметры в профиль:</label>
+                                <input type="text" id="profName" class="form-control form-control-sm mb-2 studio-input" placeholder="Введите название профиля...">
+                                <button onclick="saveProfile()" class="btn btn-sm w-100 fw-bold btn-save-profile">
+                                    <i class="fas fa-save me-1"></i> Зафиксировать профиль
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-7 d-flex flex-column h-100">
+                    <div class="glass-card p-4 h-100 d-flex flex-column overflow-auto style-scrollbar" id="generatorRightColumn">
+                        <div class="d-flex align-items-center justify-content-between mb-4 border-bottom border-white border-opacity-10 pb-2 flex-shrink-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-sliders-h fa-lg text-warning"></i>
+                                <h3 class="h5 mb-0 fw-semibold text-white">Параметры генерации</h3>
+                            </div>
+                            <button onclick="resetGeneratorParams()" class="btn btn-sm btn-outline-danger border-opacity-25 py-1 px-2" style="font-size: 11px;" title="Сбросить все настройки">
+                                <i class="fas fa-trash-alt me-1"></i> Сбросить параметры
+                            </button>
+                        </div>
+                        
+                        <div class="row g-3 flex-grow-1">
+                            <div class="col-md-12">
+                                <label class="small text-secondary mb-1 text-uppercase fw-bold studio-label">Описание (Текстовый промпт для модели)</label>
+                                <textarea id="userPrompt" class="form-control studio-input studio-textarea" rows="4" placeholder="Техническое описание аудиосигнала (формируется автоматически после анализа либо вводится вручную)..."></textarea>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="small text-secondary mb-1 text-uppercase fw-bold studio-label">Жанр (Genre)</label>
+                                <select id="genreSelect" class="form-select studio-input">
+                                    <option value="Hip-Hop">Hip-Hop</option>
+                                    <option value="Drill">Drill</option>
+                                    <option value="Phonk">Phonk</option>
+                                    <option value="Hyperpop">Hyperpop</option>
+                                    <option value="Synthwave">Synthwave</option>
+                                    <option value="Slap House">Slap House</option>
+                                    <option value="Techno">Techno</option>
+                                    <option value="Lo-Fi Chill">Lo-Fi Chill</option>
+                                    <option value="Pop Studio">Pop Studio</option>
+                                    <option value="Rock Master">Rock Master</option>
+                                    <option value="Ambient Textures">Ambient Textures</option>
+                                    <option value="Cinematic Ancient">Cinematic Ancient</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="small text-secondary mb-1 text-uppercase fw-bold studio-label">Эмоциональный тон (Mood)</label>
+                                <select id="moodSelect" class="form-select studio-input">
+                                    <option value="Energetic">Energetic</option>
+                                    <option value="Aggressive">Aggressive</option>
+                                    <option value="Dark Mysterious">Dark Mysterious</option>
+                                    <option value="Epic Cinematic">Epic Cinematic</option>
+                                    <option value="Melancholic">Melancholic</option>
+                                    <option value="Sad Emotional">Sad Emotional</option>
+                                    <option value="Happy Uplifting">Happy Uplifting</option>
+                                    <option value="Late Night Chill">Late Night Chill</option>
+                                    <option value="Cosmic Relaxing">Cosmic Relaxing</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="small text-secondary mb-1 text-uppercase fw-bold studio-label">Темп (BPM): <span id="bpmVal" class="text-warning fw-bold">120</span></label>
+                                <input type="range" id="bpmRange" class="form-range studio-range" min="60" max="180" value="120" oninput="document.getElementById('bpmVal').innerText=this.value">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="small text-secondary mb-1 text-uppercase fw-bold studio-label">Тональность (Key)</label>
+                                <select id="keySelect" class="form-select studio-input"></select>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label class="small text-secondary mb-1 text-uppercase fw-bold studio-label">Длительность: <span id="durVal" class="text-warning fw-bold">10</span> сек.</label>
+                                <input type="range" id="durRange" class="form-range studio-range" min="5" max="150" value="10" oninput="document.getElementById('durVal').innerText=this.value">
+                            </div>
+                        </div>
+                        
+                        <hr class="my-3 border-white opacity-10 flex-shrink-0">
+                        <button onclick="generate()" id="btnGen" class="btn-custom w-100 py-3 fw-bold fs-5 tracking-wide flex-shrink-0 mb-3"><i class="fas fa-magic me-2"></i> СГЕНЕРИРОВАТЬ</button>
+                        
+                        <div id="resCard" class="studio-player-box mt-2 animate-fade-in flex-shrink-0" style="display:none;">
+                            <div class="p-3 rounded-4 bg-dark bg-opacity-70 border border-success border-opacity-20 shadow-lg">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <h4 class="m-0 text-uppercase fw-bold text-success tracking-wider" style="font-size: 11px;">
+                                        <i class="fas fa-wave-square me-2 pulse-glow"></i>Синтезированный аудиосигнал
+                                    </h4>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 font-monospace" style="font-size: 10px;">Ready (24-bit)</span>
+                                </div>
+                                
+                                <audio id="player" controls style="width:100%;" class="mb-3 custom-audio-player"></audio>
+                                
+                                <div class="row g-2 align-items-center pt-2 border-top border-white border-opacity-5">
+                                    <div class="col-sm-8">
+                                        <input type="text" id="trackTitle" class="form-control form-control-sm studio-input" placeholder="Название файла для экспорта...">
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <button onclick="saveTrack()" class="btn-custom btn-library btn-sm w-100 py-2 fw-bold" style="font-size: 12px;">
+                                            <i class="fas fa-bookmark me-1"></i> Сохранить в базу
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="profiles" class="tab-pane h-100">
+            <div class="glass-card p-4 h-100 d-flex flex-column">
+                <h3 class="h5 mb-4 text-white border-bottom border-white border-opacity-10 pb-2 flex-shrink-0"><i class="fas fa-id-card text-warning me-2"></i>Сохраненные профили аудиореференсов</h3>
+                <div id="profilesList"></div>
+            </div>
+        </div>
+
+        <div id="tracks" class="tab-pane h-100">
+            <div class="glass-card p-4 h-100 d-flex flex-column">
+                <h3 class="h5 mb-4 text-white border-bottom border-white border-opacity-10 pb-2 flex-shrink-0"><i class="fas fa-headphones text-warning me-2"></i>Экспортированная медиатека</h3>
+                <div id="tracksList" class="flex-grow-1 overflow-auto style-scrollbar"></div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<footer class="studio-footer">
+    <div class="container-fluid px-4 text-center">
+        <span class="opacity-50"><i class="fas fa-shield-alt me-1 text-info"></i> AI Soundhelper · Core MusicGen AI System Engine</span>
+    </div>
+</footer>
+
+<script>
+    // Инициализация кастомных UI-нотификаций (Toast)
+    function showToast(message, type = 'success') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container-studio';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `studio-toast animate-toast-in ${type}`;
+        
+        let icon = '<i class="fas fa-check-circle text-success me-2"></i>';
+        if (type === 'warning') icon = '<i class="fas fa-exclamation-triangle text-warning me-2"></i>';
+        if (type === 'error') icon = '<i class="fas fa-times-circle text-danger me-2"></i>';
+        if (type === 'info') icon = '<i class="fas fa-info-circle text-info me-2"></i>';
+
+        toast.innerHTML = `${icon}<span>${message}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.remove('animate-toast-in');
+            toast.classList.add('animate-toast-out');
+            toast.addEventListener('animationend', () => toast.remove());
+        }, 4000);
+    }
+
+    // Слушатель выбора файлов референсов
+    document.getElementById('fileInput').addEventListener('change', function() {
+        const files = this.files;
+        const design = document.getElementById('dropZone');
+        const listContainer = document.getElementById('fileListContainer');
+        
+        listContainer.innerHTML = ''; 
+
+        if (files.length > 0) {
+            design.innerHTML = `<i class="fas fa-check-circle fa-xl mb-1 text-success"></i><span class="d-block text-success fw-bold small">Выбрано файлов: ${files.length} шт.</span>`;
+            design.style.borderColor = '#10b981';
+
+            Array.from(files).forEach((file) => {
+                const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+                listContainer.innerHTML += `
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-5 animate-fade-in">
+                        <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                            <i class="fas fa-music text-info flex-shrink-0"></i>
+                            <span class="text-white small text-nowrap text-truncate" style="max-width: 240px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+                        </div>
+                        <span class="badge bg-dark text-secondary font-monospace" style="font-size: 10px;">${fileSize} MB</span>
+                    </div>
+                `;
+            });
+            showToast(`Загружено файлов: ${files.length}`, 'info');
+        }
+    });
+
+    // Сброс загруженных файлов
+    function resetUpload() {
+        document.getElementById('fileInput').value = "";
+        const design = document.getElementById('dropZone');
+        design.innerHTML = `<i class="fas fa-cloud-upload-alt fa-2x mb-2 text-info"></i><span class="d-block fw-semibold text-white">Выберите аудиофайлы</span><span class="small opacity-50 fst-italic text-secondary">Допускается загрузка до 5 файлов</span>`;
+        design.style.borderColor = 'rgba(255,255,255,0.08)';
+        document.getElementById('fileListContainer').innerHTML = '';
+        document.getElementById('saveProfileBox').style.display = 'none';
+        document.getElementById('statusAnalyze').innerHTML = "";
+        lastAnalysis = null;
+        showToast("Список файлов очищен", "warning");
+    }
+
+    // Очистка параметров формы генератора
+    function resetGeneratorParams() {
+        document.getElementById('userPrompt').value = '';
+        document.getElementById('genreSelect').selectedIndex = 0;
+        document.getElementById('moodSelect').selectedIndex = 0;
+        document.getElementById('keySelect').selectedIndex = 0;
+        
+        const bpmRange = document.getElementById('bpmRange');
+        bpmRange.value = 120;
+        document.getElementById('bpmVal').innerText = 120;
+
+        const durRange = document.getElementById('durRange');
+        durRange.value = 10;
+        document.getElementById('durVal').innerText = 10;
+
+        showToast("Параметры генерации возвращены к исходным", "warning");
+    }
+
+    // Переключение контекстных вкладок модуля
+    function showTab(id) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        const activeBtn = document.querySelector(`.tab-link[data-tab="${id}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    document.querySelectorAll('.tab-link').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-tab');
+            showTab(id);
+            if(id === 'profiles') loadProfiles();
+            if(id === 'tracks') loadTracks();
+        });
+    });
+
+    // Генерация списка тональностей (Key Selector)
+    const notes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const keySelect = document.getElementById('keySelect');
+    notes.forEach(n => {
+        keySelect.innerHTML += `<option value="${n} Major">${n} Major</option>`;
+        keySelect.innerHTML += `<option value="${n} Minor">${n} Minor</option>`;
+    });
+
+    let lastAnalysis = null;
+    let lastGenerated = null;
+
+    // Асинхронный запрос на анализ загруженных файлов
+    async function uploadFiles() {
+        const files = document.getElementById('fileInput').files;
+        if(!files.length) return showToast("Файлы для анализа не выбраны", "error");
+        const fd = new FormData();
+        for(let f of files) fd.append('files', f);
+        const status = document.getElementById('statusAnalyze');
+        status.innerHTML = "<div class='text-info small'><i class='fas fa-spinner fa-spin me-2'></i> Анализ структуры аудиофайлов...</div>";
+        try {
+            const res = await fetch('http://localhost:8000/api/analyze', {method:'POST', body:fd});
+            lastAnalysis = await res.json();
+            
+            if (lastAnalysis.detected_key) {
+                const keySelector = document.getElementById('keySelect');
+                if (keySelector) keySelector.value = lastAnalysis.detected_key;
+            }
+            
+            const promptInput = document.getElementById('userPrompt');
+            if (promptInput) {
+                const style = lastAnalysis.style_profile || "Custom Style";
+                const key = lastAnalysis.detected_key || "Unknown Key";
+                const mood = lastAnalysis.mood || "Atmospheric";
+                const density = lastAnalysis.rhythm_density || "Dynamic";
+                const bass = lastAnalysis.bass_power || "Standard Bass";
+                const energy = lastAnalysis.energy_level || "Balanced Vibe";
+
+                let detailedPrompt = `${style}, mood: ${mood}, key of ${key}, ${bass}, rhythm structure: ${density}, overall dynamics: ${energy}`;
+
+                if (style.includes("Deep") || mood.includes("Dark") || mood.includes("Melancholic")) {
+                    detailedPrompt += ", ambient textures, lush pad chords, texturized soundscape, emotional depth, perfect for late night cinematic vibes";
+                } else {
+                    detailedPrompt += ", crisp percussions, sparkling synths, high-end acoustic definition, premium radio production";
+                }
+
+                detailedPrompt += ", 4k master audio, high fidelity, polished mix, clear transients, warm analog saturation";
+                
+                if (promptInput.value.trim() !== "") {
+                    promptInput.value = promptInput.value.trim() + ", " + detailedPrompt;
+                } else {
+                    promptInput.value = detailedPrompt;
+                }
+            }
+            
+            document.getElementById('saveProfileBox').style.display = 'block';
+            showToast("Анализ завершен. Промпт сформирован.", "success");
+            
+            status.innerHTML = `
+                <div class="alert alert-info bg-dark bg-opacity-50 border-0 text-white small shadow-sm p-3 rounded-4 border border-info border-opacity-10 mb-0">
+                    <div class="fw-bold text-warning mb-2" style="font-size: 11px;"><i class="fas fa-brain me-2"></i>РЕЗУЛЬТАТЫ АНАЛИЗА:</div>
+                    <div class="row g-2 text-white-50" style="font-size: 11px;">
+                        <div class="col-6"><b>Тональность:</b> <span class="text-white">${lastAnalysis.detected_key}</span></div>
+                        <div class="col-6"><b>Темп:</b> <span class="text-white">${lastAnalysis.bpm} BPM</span></div>
+                        <div class="col-6"><b>Настроение:</b> <span class="text-white">${lastAnalysis.mood}</span></div>
+                        <div class="col-6"><b>Плотность ритма:</b> <span class="text-white">${lastAnalysis.rhythm_density}</span></div>
+                        <div class="col-6"><b>Мощность баса:</b> <span class="text-white">${lastAnalysis.bass_power}</span></div>
+                        <div class="col-6"><b>Уровень энергии:</b> <span class="text-white">${lastAnalysis.energy_level}</span></div>
+                    </div>
+                </div>
+            `;
+        } catch(e) { 
+            console.error(e);
+            status.innerHTML = "<div class='text-danger small'><i class='fas fa-exclamation-triangle me-1'></i> Ошибка сетевого соединения</div>"; 
+            showToast("Ошибка при выполнении запроса анализа", "error");
+        }
+    }
+
+    // Асинхронный запрос на генерацию аудиосигнала
+    async function generate() {
+        const btn = document.getElementById('btnGen');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-compact-disc fa-spin me-2"></i> ИДЕТ СИНТЕЗ СИГНАЛА...';
+        showToast("Запущен процесс генерации аудио...", "info");
+
+        const fd = new FormData();
+        fd.append('prompt', document.getElementById('userPrompt').value);
+        fd.append('genre', document.getElementById('genreSelect').value);
+        fd.append('bpm', document.getElementById('bpmRange').value);
+        fd.append('duration', document.getElementById('durRange').value);
+        fd.append('key', document.getElementById('keySelect').value);
+        fd.append('mood', document.getElementById('moodSelect').value);
+        try {
+            const res = await fetch('http://localhost:8000/api/generate', {method:'POST', body:fd});
+            lastGenerated = await res.json();
+            
+            const resCard = document.getElementById('resCard');
+            resCard.style.display = 'block';
+            document.getElementById('player').src = lastGenerated.url;
+            document.getElementById('player').play();
+            showToast("Синтез аудиосигнала завершен", "success");
+
+            const rightColumn = document.getElementById('generatorRightColumn');
+            if (rightColumn) {
+                setTimeout(() => {
+                    rightColumn.scrollTo({
+                        top: rightColumn.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }, 150);
+            }
+
+        } catch(e) { 
+            showToast("Ошибка генерации. Проверьте состояние бэкенда.", "error"); 
+        }
+        finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic me-2"></i> СГЕНЕРИРОВАТЬ'; }
+    }
+
+    // Сохранение записи в медиатеку
+    async function saveTrack() {
+        const title = document.getElementById('trackTitle').value.trim();
+        if(!title) return showToast("Укажите имя файла!", "error");
+        const fd = new FormData();
+        fd.append('title', title);
+        fd.append('filename', lastGenerated.filename);
+        fd.append('genre', document.getElementById('genreSelect').value);
+        fd.append('mood', document.getElementById('moodSelect').value);
+        fd.append('url', lastGenerated.url);
+        await fetch('http://localhost:8000/api/save_track', {method:'POST', body:fd});
+        showToast(`Файл "${title}" сохранен в базу данных`, "success");
+        document.getElementById('trackTitle').value = "";
+    }
+
+    // Загрузка списка экспортированных треков
+    async function loadTracks() {
+        const res = await fetch('http://localhost:8000/api/tracks');
+        const data = await res.json();
+        const container = document.getElementById('tracksList');
+        container.innerHTML = data.map(t => `
+            <div class="track-card p-3 mb-2 bg-dark bg-opacity-40 border-1 border-white border-opacity-10 rounded-4 shadow-sm">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <div class="fw-bold text-warning fs-5">${escapeHtml(t.title)}</div>
+                        <small class="text-secondary opacity-75">${t.genre} • ${t.mood}</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <audio src="${t.url}" controls style="height: 32px; width: 220px;"></audio>
+                        <button onclick="deleteTrack(${t.id})" class="btn btn-sm text-danger border-0 opacity-50 hover-opacity-100"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            </div>
+        `).join('') || "<p class='text-center opacity-50 py-4'>База данных пуста</p>";
+    }
+
+    // Удаление записи из медиатеки
+    async function deleteTrack(id) {
+        if(confirm("Удалить выбранную запись?")) {
+            await fetch(`http://localhost:8000/api/delete_track/${id}`, {method:'DELETE'});
+            showToast("Запись удалена", "warning");
+            loadTracks();
+        }
+    }
+
+    // Сохранение текущего профиля параметров
+    async function saveProfile() {
+        const name = document.getElementById('profName').value.trim();
+        if(!name) return showToast("Укажите имя профиля!", "error");
+        
+        const currentPrompt = document.getElementById('userPrompt').value.trim();
+        if(!currentPrompt) return showToast("Промпт пуст. Сохранение невозможно.", "error");
+
+        const fd = new FormData();
+        fd.append('name', name);
+        fd.append('style', currentPrompt); 
+        fd.append('key', lastAnalysis.detected_key);
+        fd.append('brightness', lastAnalysis.brightness || "mid");
+        
+        await fetch('http://localhost:8000/api/save_profile', {method:'POST', body:fd});
+        showToast(`Профиль "${name}" успешно записан`, "success");
+        document.getElementById('profName').value = "";
+    }
+
+    // Загрузка сохраненных профилей
+    async function loadProfiles() {
+        const res = await fetch('http://localhost:8000/api/profiles');
+        const data = await res.json();
+        const container = document.getElementById('profilesList');
+        
+        container.className = "d-flex flex-wrap gap-3 align-content-start flex-grow-1 overflow-auto style-scrollbar p-1";
+        
+        container.innerHTML = data.map(p => `
+            <div class="studio-preset-card animate-fade-in">
+                <div class="preset-info overflow-hidden">
+                    <div class="preset-name text-truncate" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+                    <div class="preset-meta"><i class="fas fa-music me-1"></i> ${p.key || 'Auto Key'}</div>
+                </div>
+                <div class="preset-actions">
+                    <button onclick="applyProfile('${escapeHtml(p.style)}', '${p.key}')" class="btn-preset-apply" title="Применить параметры профиля">
+                        <i class="fas fa-reply"></i>
+                    </button>
+                    <button onclick="deleteProfile(${p.id})" class="btn-preset-delete" title="Удалить профиль">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('') || "<div class='text-center opacity-50 py-4 w-100'>Список сохраненных профилей пуст.</div>";
+    }
+
+    // Удаление профиля
+    async function deleteProfile(id) {
+        await fetch(`http://localhost:8000/api/delete_profile/${id}`, {method:'DELETE'});
+        showToast("Профиль удален", "warning");
+        loadProfiles();
+    }
+
+    // Вспомогательная функция экранирования спецсимволов HTML
+    function escapeHtml(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+    }
+
+    // Применение сохраненного профиля в конфигурационную форму
+    function applyProfile(stylePrompt, fullKey) {
+        showTab('main');
+        const promptInput = document.getElementById('userPrompt');
+        if (promptInput) promptInput.value = stylePrompt;
+        if (fullKey) {
+            const keySelector = document.getElementById('keySelect');
+            if (keySelector) keySelector.value = fullKey;
+        }
+        showToast("Параметры профиля импортированы в генератор", "info");
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
